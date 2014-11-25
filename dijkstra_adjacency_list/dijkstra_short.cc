@@ -21,18 +21,19 @@ void ShortestPath(VertexEdgeMap& vertex_edge, string& source) {
 	get<0>(s) = 0;
 	vertex_set.emplace(get<0>(s), source);
 	while (!vertex_set.empty()) {
+		const string& top_id = get<1>(*(vertex_set.begin()));
 		auto& top = vertex_edge[get<1>(*(vertex_set.begin()))];
 		for (auto& neighbor : get<2>(top)) {
 			int dist = get<0>(top) + get<1>(neighbor);
 			auto& v = vertex_edge[get<0>(neighbor)];
 			if (get<0>(v) == kInfinite) {
 				get<0>(v) = dist;
-				get<1>(v) = get<1>(top);
+				get<1>(v) = top_id;
 				vertex_set.emplace(dist, get<0>(neighbor));
 			} else if (dist < get<0>(v)) {
 				vertex_set.erase(std::make_tuple(get<0>(v), get<0>(neighbor)));
 				get<0>(v) = dist;
-				get<1>(v) = get<1>(top);
+				get<1>(v) = top_id;
 				vertex_set.emplace(dist, get<0>(neighbor));
 			}
 		}
@@ -51,10 +52,21 @@ void PrintPath(VertexEdgeMap& vertex_edge, const string& vertex, FILE *os) {
 }
 
 void PrintPathInfo(VertexEdgeMap& vertex_edge, const string& vertex, FILE *os) {
-	fprintf(os, "%s dist (%d) Path:", vertex.c_str(), get<0>(vertex_edge[vertex]));
-	PrintPath(vertex_edge, vertex, os);
+	if (get<0>(vertex_edge[vertex]) == kInfinite) {
+		fprintf(os, "%s dist (unreachable) No Path", vertex.c_str());
+	} else {
+		fprintf(os, "%s dist (%d) Path:\t ", vertex.c_str(), get<0>(vertex_edge[vertex]));
+		PrintPath(vertex_edge, vertex, os);
+	}
 	fprintf(os, "\n");
 }
+
+void PrintAllPathInfo(VertexEdgeMap& vertex_edge, FILE *os) {
+	for (auto& v : vertex_edge) {
+		PrintPathInfo(vertex_edge, v.first.c_str(), os);
+	}
+}
+
 
 void LoadGraph(std::ifstream& is, VertexEdgeMap& vertex_edge) {
 	string s, e;
@@ -64,16 +76,18 @@ void LoadGraph(std::ifstream& is, VertexEdgeMap& vertex_edge) {
 		get<0>(vertex) = kInfinite;
 		get<1>(vertex) = "";
 		get<2>(vertex).emplace_back(e, w);
+		auto& vertex_right = vertex_edge[e];
+		get<0>(vertex_right) = kInfinite;
+		get<1>(vertex_right) = "";
 	}
 }
 
 int main() {
 	std::ifstream is{"digraph"};
 	std::string source{"v1"};
-	std::string dest{"v7"};
 	VertexEdgeMap ve;
 	LoadGraph(is, ve);
 	ShortestPath(ve, source);
-	PrintPathInfo(ve, dest, stdout);
+	PrintAllPathInfo(ve, stdout);
 	return 0;
 }
